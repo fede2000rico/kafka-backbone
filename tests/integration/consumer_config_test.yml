@@ -1,0 +1,4 @@
+bootstrap_servers: kafka:9092
+group_id: integration_test_group_v2
+auto_offset_reset: earliest
+topic: data-stream

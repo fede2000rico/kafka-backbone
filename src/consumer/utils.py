@@ -11,7 +11,9 @@ class KafkaConsumerConfig(BaseModel):
     bootstrap_servers: str = Field(serialization_alias='bootstrap.servers')
     group_id: str = Field(serialization_alias='group.id')
     auto_offset_reset: str = Field(serialization_alias='auto.offset.reset')
-    topic: str # Not a kafka config, but our app config
+    topic: str
+    
+    model_config = ConfigDict(extra='allow') # Not a kafka config, but our app config
 
 def get_kafka_consumer(path: str) -> tuple[Consumer, str]:
     """

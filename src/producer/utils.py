@@ -55,8 +55,9 @@ def delivery_report(err: Optional[str], msg: Any) -> None:
     """
     if err is not None:
         print(f"Message delivery failed: {err}")
-    # else:
-    #     print(f"Message delivered to {msg.topic()} [{msg.partition()}]")
+    else:
+        # print(f"Message delivered to {msg.topic()} [{msg.partition()}]")
+        pass
 
 def send_message(
     producer_instance: Producer, 
