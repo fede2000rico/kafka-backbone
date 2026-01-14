@@ -1,0 +1,33 @@
+services:
+  kafka:
+    container_name: kafka
+    image: ${KAFKA_IMAGE}
+    ports:
+      - "${KAFKA_PORT_HOST}:${KAFKA_PORT_CONTAINER}"
+      - "9094:9094"
+    environment:
+      - KAFKA_NODE_ID=${KAFKA_NODE_ID}
+      - KAFKA_PROCESS_ROLES=${KAFKA_PROCESS_ROLES}
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=${KAFKA_CONTROLLER_QUORUM_VOTERS}
+      - KAFKA_LISTENERS=${KAFKA_LISTENERS}
+      - KAFKA_ADVERTISED_LISTENERS=${KAFKA_ADVERTISED_LISTENERS}
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=${KAFKA_LISTENER_SECURITY_PROTOCOL_MAP}
+      - KAFKA_CONTROLLER_LISTENER_NAMES=${KAFKA_CONTROLLER_LISTENER_NAMES}
+      - KAFKA_INTER_BROKER_LISTENER_NAME=${KAFKA_INTER_BROKER_LISTENER_NAME}
+      - KAFKA_LOG_DIRS=${KAFKA_LOG_DIRS}
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+  kafka-ui:
+    container_name: kafka-ui
+    image: ${KAFKA_UI_IMAGE}
+    ports:
+      - "${KAFKA_UI_PORT_HOST}:${KAFKA_UI_PORT_CONTAINER}"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=${KAFKA_UI_CLUSTER_NAME}
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=${KAFKA_UI_BOOTSTRAP_SERVERS}
+    depends_on:
+      - kafka
+
+volumes:
+  kafka_data:
