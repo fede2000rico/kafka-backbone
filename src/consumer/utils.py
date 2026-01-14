@@ -4,6 +4,7 @@ import yaml
 from typing import Any, Dict, Callable, Optional
 from pydantic import BaseModel, Field, ConfigDict
 import socket
+import os
 
 class KafkaConsumerConfig(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
@@ -11,6 +12,8 @@ class KafkaConsumerConfig(BaseModel):
     bootstrap_servers: str = Field(serialization_alias='bootstrap.servers')
     group_id: str = Field(serialization_alias='group.id')
     auto_offset_reset: str = Field(serialization_alias='auto.offset.reset')
+    enable_auto_commit: bool = Field(default=True, serialization_alias='enable.auto.commit')
+    auto_commit_interval_ms: int = Field(default=5000, serialization_alias='auto.commit.interval.ms')
     topic: str
     
     model_config = ConfigDict(extra='allow') # Not a kafka config, but our app config
@@ -33,6 +36,10 @@ def get_kafka_consumer(path: str) -> tuple[Consumer, str]:
         
     # Validate with Pydantic
     try:
+        # Allow env var override
+        if os.environ.get('KAFKA_BOOTSTRAP_SERVERS'):
+            config_dict['bootstrap_servers'] = os.environ['KAFKA_BOOTSTRAP_SERVERS']
+            
         kafka_conf = KafkaConsumerConfig.model_validate(config_dict)
     except Exception as e:
         print(f"Config validation error: {e}")

@@ -4,6 +4,7 @@ import yaml
 from typing import Any, Dict, Callable, Optional
 from pydantic import BaseModel, Field, ConfigDict
 import socket
+import os
 
 class KafkaConfig(BaseModel):
     # Using strict mode is implicitly enforced if we don't alias input fields
@@ -30,7 +31,15 @@ def get_kafka_producer(path: str) -> Producer:
         config_dict = yaml.safe_load(f)
         
     # Validate with Pydantic - strictly expects snake_case keys from YAML
-    kafka_conf = KafkaConfig.model_validate(config_dict)
+    try:
+        # Allow env var override
+        if os.environ.get('KAFKA_BOOTSTRAP_SERVERS'):
+            config_dict['bootstrap_servers'] = os.environ['KAFKA_BOOTSTRAP_SERVERS']
+            
+        kafka_conf = KafkaConfig.model_validate(config_dict)
+    except Exception as e:
+        print(f"Config validation error: {e}")
+        raise e
 
     # Use 'by_alias=True' to export keys as 'bootstrap.servers', 'client.id'
     # which is what confluent_kafka expects due to serialization_alias
