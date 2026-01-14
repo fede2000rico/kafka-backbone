@@ -1,0 +1,4 @@
+bootstrap_servers: "localhost:9094"
+group_id: "aggregator-group"
+auto_offset_reset: "earliest"
+topic: "data-stream"

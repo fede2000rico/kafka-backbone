@@ -1,74 +1,76 @@
 import sys
 import json
-from confluent_kafka import Consumer, KafkaError
+import time
+
+from consumer.utils import get_kafka_consumer
 
 def main():
-    """
-    Main function for the Kafka Consumer with Aggregation Logic.
-    
-    It serves as a buffer:
-    1. Reads a message.
-    2. Checks the internal 'buffer' using the 'count' as a key.
-    3. If 'count' is new: stores message and waits.
-    4. If 'count' exists: combines the new message with the stored one and prints the result.
-    """
-    topic = "data-stream"
-    conf = {
-        'bootstrap.servers': 'localhost:9092',
-        'group.id': 'aggregator-group',
-        'auto.offset.reset': 'earliest'
-    }
-
-    consumer = Consumer(conf)
-    consumer.subscribe([topic])
-
-    print(f"Starting Consumer listening on {topic}...")
-    
-    # Buffer dictionary: { count_id: [message1_data] }
-    msg_buffer = {}
-
     try:
-        while True:
-            msg = consumer.poll(timeout=1.0)
-            if msg is None:
-                continue
-            if msg.error():
-                if msg.error().code() == KafkaError._PARTITION_EOF:
-                    continue
-                else:
-                    print(msg.error())
-                    break
-            
-            try:
-                current_data = json.loads(msg.value().decode('utf-8'))
-                count_id = current_data.get('count')
+        # Load Config
+        try:
+            config_path = 'src/consumer/consumer_config.yml'
+            consumer, topic = get_kafka_consumer(config_path)
+        except FileNotFoundError:
+            config_path = 'consumer_config.yml'
+            consumer, topic = get_kafka_consumer(config_path)
+
+        consumer.subscribe([topic])
+        print(f"Consumer subscribed to {topic}. Waiting for messages...")
+
+        # Buffer for aggregation
+        # We need to aggregate current cycle messages.
+        # Assuming simple aggregation for demonstration: wait for latest from A and latest from B
+        buffer = {
+            "machine_A": None,
+            "machine_B": None
+        }
+
+        try:
+            while True:
+                msg = consumer.poll(1.0)
                 
-                if count_id is None:
-                    print(f"Skipping message without count: {current_data}")
+                if msg is None:
+                    continue
+                if msg.error():
+                    print(f"Consumer error: {msg.error()}")
                     continue
 
-                if count_id in msg_buffer:
-                    # Partner found! Aggregate.
-                    previous_data = msg_buffer.pop(count_id)
-                    aggregated = {
-                        "id": count_id,
-                        "data_1": previous_data,
-                        "data_2": current_data,
-                        "status": "COMPLETED"
-                    }
-                    print(f"AGGREGATED OUTPUT: {json.dumps(aggregated)}")
-                else:
-                    # First arrival, store in buffer
-                    msg_buffer[count_id] = current_data
-                    # print(f"Buffered count {count_id}, waiting for partner...")
+                try:
+                    # Decode message
+                    key = msg.key().decode('utf-8') if msg.key() else None
+                    val_str = msg.value().decode('utf-8')
+                    val = json.loads(val_str)
+                    
+                    producer_id = val.get('producer_id')
+                    
+                    # Update buffer
+                    if producer_id in buffer:
+                        buffer[producer_id] = val
+                        # print(f"Received from {producer_id}")
 
-            except Exception as e:
-                print(f"Error decoding message: {e}")
+                    # Check if we have both
+                    if buffer["machine_A"] and buffer["machine_B"]:
+                        # AGGREGATE
+                        agg_msg = f"AGGREGATED: {buffer['machine_A']} + {buffer['machine_B']}"
+                        print("------------------------------------------------")
+                        print(agg_msg)
+                        print("------------------------------------------------")
+                        
+                        # Clear buffer for next cycle
+                        buffer["machine_A"] = None
+                        buffer["machine_B"] = None
 
-    except KeyboardInterrupt:
-        print("Stopping consumer...")
-    finally:
-        consumer.close()
+                except Exception as e:
+                    print(f"Error processing message: {e}")
+
+        except KeyboardInterrupt:
+            pass
+        finally:
+            consumer.close()
+
+    except Exception as e:
+        print(f"Failed to start consumer: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

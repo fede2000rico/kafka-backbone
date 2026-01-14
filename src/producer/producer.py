@@ -4,12 +4,7 @@ import socket
 import threading
 from confluent_kafka import Producer
 
-# Import utilities
-try:
-    from producer.utils import send_message, delivery_report, get_kafka_producer
-except ImportError:
-    # For running locally from src root without package install
-    from utils import send_message, delivery_report, get_kafka_producer
+from producer.utils import send_message, delivery_report, get_kafka_producer
 
 def produce_thread(producer_instance: Producer, topic: str, producer_id: str):
     """
